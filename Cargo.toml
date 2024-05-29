@@ -1,0 +1,17 @@
+[package]
+name = "can-dbg"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "lib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "can-dbg"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0.86"
+can-types = { git = "https://github.com/natkeo559/can-types", version = "0.1.5" }
+clap = { version = "4.5.4", features = ["derive"] }
