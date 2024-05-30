@@ -1,5 +1,5 @@
 use clap::Parser;
-use lib::cli::{Cli, Commands, DecodeCommands};
+use lib::cli::{Cli, Commands, DecodeCommands, StatCommands};
 
 fn main() {
     let cli = Cli::parse();
@@ -11,6 +11,9 @@ fn main() {
             DecodeCommands::Msg(_msg_args) => {}
             DecodeCommands::File(_file_args) => {}
         },
-        Commands::Stat(_stat_args) => {}
+        Commands::Stat(stat_args) => match &stat_args.command {
+            StatCommands::File(_file_args) => {}
+            StatCommands::Spec => {}
+        },
     }
 }

@@ -65,6 +65,7 @@ pub enum Commands {
 }
 
 #[derive(Args, Debug)]
+#[command(args_conflicts_with_subcommands = true)]
 pub struct DecodeArgs {
     #[command(subcommand)]
     pub command: DecodeCommands,
@@ -74,20 +75,20 @@ pub struct DecodeArgs {
 pub enum DecodeCommands {
     /// Decode arbitration ID
     #[command(arg_required_else_help = true)]
-    Id(IdArgs),
+    Id(DecodeIdArgs),
     /// Decode data field
     #[command(arg_required_else_help = true)]
-    Data(DataArgs),
+    Data(DecodeDataArgs),
     /// Decode a CAN message/frame
     #[command(arg_required_else_help = true)]
-    Msg(MsgArgs),
+    Msg(DecodeMsgArgs),
     /// Decode a file
     #[command(arg_required_else_help = true)]
-    File(FileArgs),
+    File(DecodeFileArgs),
 }
 
 #[derive(Args, Debug)]
-pub struct IdArgs {
+pub struct DecodeIdArgs {
     /// Specifies the protocol type
     #[arg(
         value_enum,
@@ -120,7 +121,7 @@ pub struct IdArgs {
 
 #[derive(Args, Debug)]
 #[command(flatten_help = true)]
-pub struct DataArgs {
+pub struct DecodeDataArgs {
     /// Specifies the input base for numerical values
     #[arg(
         value_enum,
@@ -148,7 +149,7 @@ pub struct DataArgs {
 
 #[derive(Args, Debug)]
 #[command(flatten_help = true)]
-pub struct MsgArgs {
+pub struct DecodeMsgArgs {
     /// Specifies the protocol type
     #[arg(
         value_enum,
@@ -188,7 +189,7 @@ pub struct MsgArgs {
 
 #[derive(Args, Debug)]
 #[command(flatten_help = true)]
-pub struct FileArgs {
+pub struct DecodeFileArgs {
     /// Specifies the protocol type
     #[arg(
         value_enum,
@@ -220,5 +221,41 @@ pub struct FileArgs {
 }
 
 #[derive(Args, Debug)]
+#[command(args_conflicts_with_subcommands = true)]
 #[command(flatten_help = true)]
-pub struct StatArgs {}
+pub struct StatArgs {
+    #[command(subcommand)]
+    pub command: StatCommands,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum StatCommands {
+    /// Show statistics for a whole candump file with additional metadata
+    #[command(arg_required_else_help = true)]
+    File(StatFileArgs),
+    /// Show statistics for a specific data field, id, or message in a file
+    #[command(arg_required_else_help = true)]
+    Spec,
+}
+
+#[derive(Args, Debug)]
+#[command(flatten_help = true)]
+pub struct StatFileArgs {
+    #[arg(short = 'f', long, value_name = "FILEPATH")]
+    pub input_file: PathBuf,
+
+    /// [candump formats]
+    ///  - [a] can0 00000000 [8] FF FF FF FF FF FF FF FF
+    ///  - [b] (0000000000.000000) can0 FFFFFFFF#FFFFFFFFFFFFFFFF
+    #[arg(
+        value_enum,
+        long,
+        value_name = "INPUT-FORMAT",
+        default_value = "b",
+        verbatim_doc_comment
+    )]
+    pub input_format: CandumpFormat,
+
+    #[arg(short, long)]
+    pub id_stats: bool,
+}
