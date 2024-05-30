@@ -11,5 +11,6 @@ fn main() {
             DecodeCommands::Msg(_msg_args) => {}
             DecodeCommands::File(_file_args) => {}
         },
+        Commands::Stat(_stat_args) => {}
     }
 }

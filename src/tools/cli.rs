@@ -2,6 +2,51 @@ use std::path::PathBuf;
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
+#[derive(ValueEnum, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Protocol {
+    Can,
+    J1939,
+}
+
+#[derive(ValueEnum, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Base {
+    Dec,
+    Hex,
+}
+
+#[derive(ValueEnum, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum OutputFormatId {
+    Dec,
+    Hex,
+    Decoded,
+}
+
+#[derive(ValueEnum, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum InputFormatData {
+    Compact,
+    Spaced,
+}
+
+#[derive(ValueEnum, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum OutputFormatData {
+    BytesLe,
+    BytesBe,
+}
+
+#[derive(ValueEnum, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum OutputFormatMsg {
+    DecodedLe,
+    DecodedBe,
+}
+
+#[derive(ValueEnum, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum CandumpFormat {
+    /// can0 00000000 [8] FF FF FF FF FF FF FF FF
+    A,
+    /// (0000000000.000000) can0 FFFFFFFF#FFFFFFFFFFFFFFFF
+    B,
+}
+
 #[derive(Parser)]
 #[command(version, about)]
 pub struct Cli {
@@ -14,10 +59,18 @@ pub enum Commands {
     /// Decode arbitration ID, data fields, or candump messages
     #[command(arg_required_else_help = true)]
     Decode(DecodeArgs),
+    /// Generate statistics for a candump file
+    #[command(arg_required_else_help = true)]
+    Stat(StatArgs),
+}
+
+#[derive(Args, Debug)]
+pub struct DecodeArgs {
+    #[command(subcommand)]
+    pub command: DecodeCommands,
 }
 
 #[derive(Subcommand, Debug)]
-
 pub enum DecodeCommands {
     /// Decode arbitration ID
     #[command(arg_required_else_help = true)]
@@ -34,116 +87,138 @@ pub enum DecodeCommands {
 }
 
 #[derive(Args, Debug)]
-#[command(flatten_help = true)]
-pub struct DecodeArgs {
-    #[command(subcommand)]
-    pub command: DecodeCommands,
-}
-
-#[derive(Args, Debug)]
-#[command(flatten_help = true)]
 pub struct IdArgs {
-    #[arg(value_enum, name = "type", short = 't', long, default_value = "ext")]
-    pub id_type: IdType,
-
-    #[arg(value_enum, name = "base", short, long, default_value = "hex")]
-    pub input_base: Base,
-
+    /// Specifies the protocol type
     #[arg(
         value_enum,
-        name = "output-format",
-        short,
+        name = "proto",
         long,
-        default_value = "parts"
+        short,
+        value_name = "PROTOCOL",
+        default_value = "j1939"
     )]
-    pub output_id_format: OutputFormatId,
+    pub protocol: Protocol,
 
-    #[arg(name = "input", short, long, required = true)]
-    pub id: String,
+    /// Specifies the input base for numerical values
+    #[arg(
+        value_enum,
+        name = "base",
+        long,
+        short,
+        value_name = "BASE",
+        default_value = "hex"
+    )]
+    pub input_base: Base,
+
+    #[arg(value_enum, long, default_value = "decoded")]
+    pub output_format: OutputFormatId,
+
+    /// Specifies the input to be decoded
+    #[arg(name = "input", short, long, value_name = "INPUT", required = true)]
+    pub input_value: String,
 }
 
 #[derive(Args, Debug)]
 #[command(flatten_help = true)]
 pub struct DataArgs {
-    #[arg(value_enum, name = "base", short, long, default_value = "hex")]
-    pub input_base: Base,
-
+    /// Specifies the input base for numerical values
     #[arg(
         value_enum,
-        name = "output-format",
-        short,
+        name = "base",
         long,
-        default_value = "bytes-le"
+        short,
+        value_name = "BASE",
+        default_value = "hex"
     )]
-    pub output_data_format: OutputFormatData,
+    pub input_base: Base,
 
-    #[arg(name = "input", short, long, required = true)]
-    pub data: String,
+    /// [byte formats]
+    ///  - [compact] FFFFFFFF
+    ///  - [spaced]  FF FF FF FF
+    #[arg(value_enum, long, default_value = "compact", verbatim_doc_comment)]
+    pub input_format: InputFormatData,
+
+    #[arg(value_enum, short, long, default_value = "bytes-le")]
+    pub output_format: OutputFormatData,
+
+    /// Specifies the input to be decoded
+    #[arg(name = "input", short, long, value_name = "INPUT", required = true)]
+    pub input_value: String,
 }
 
 #[derive(Args, Debug)]
 #[command(flatten_help = true)]
 pub struct MsgArgs {
-    #[arg(value_enum, name = "type", short = 't', long, default_value = "ext")]
-    pub id_type: IdType,
+    /// Specifies the protocol type
+    #[arg(
+        value_enum,
+        name = "proto",
+        long,
+        short,
+        value_name = "PROTOCOL",
+        default_value = "j1939"
+    )]
+    pub protocol: Protocol,
 
-    #[arg(value_enum, name = "base", short, long, default_value = "hex")]
-    pub input_base: Base,
+    /// [candump formats]
+    ///  - [a] can0 00000000 [8] FF FF FF FF FF FF FF FF
+    ///  - [b] (0000000000.000000) can0 FFFFFFFF#FFFFFFFFFFFFFFFF
+    #[arg(
+        value_enum,
+        long,
+        value_name = "INPUT-FORMAT",
+        default_value = "b",
+        verbatim_doc_comment
+    )]
+    pub input_format: CandumpFormat,
 
     #[arg(
         value_enum,
         name = "output-format",
         short,
         long,
-        default_value = "parts-le"
+        default_value = "decoded-le"
     )]
-    pub output_msg_format: OutputFormatMsg,
+    pub output_format: OutputFormatMsg,
 
-    #[arg(short, long, default_value = "#")]
-    pub sep: char,
-
+    /// Specifies the input to be decoded
     #[arg(name = "input", short, long, required = true)]
-    pub message: String,
+    pub input_value: String,
 }
 
 #[derive(Args, Debug)]
 #[command(flatten_help = true)]
 pub struct FileArgs {
-    #[arg(short, long)]
-    filepath: PathBuf,
+    /// Specifies the protocol type
+    #[arg(
+        value_enum,
+        name = "proto",
+        long,
+        short,
+        value_name = "PROTOCOL",
+        default_value = "j1939"
+    )]
+    pub protocol: Protocol,
+
+    #[arg(short = 'f', long, value_name = "FILEPATH")]
+    pub input_file: PathBuf,
+
+    /// [candump formats]
+    ///  - [a] can0 00000000 [8] FF FF FF FF FF FF FF FF
+    ///  - [b] (0000000000.000000) can0 FFFFFFFF#FFFFFFFFFFFFFFFF
+    #[arg(
+        value_enum,
+        long,
+        value_name = "INPUT-FORMAT",
+        default_value = "b",
+        verbatim_doc_comment
+    )]
+    pub input_format: CandumpFormat,
+
+    #[arg(short, long, value_name = "FILEPATH")]
+    pub output_file: Option<PathBuf>,
 }
 
-#[derive(ValueEnum, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum IdType {
-    Std,
-    Ext,
-}
-
-#[derive(ValueEnum, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Base {
-    Dec,
-    Hex,
-}
-
-#[derive(ValueEnum, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum OutputFormatId {
-    Dec,
-    Hex,
-    Parts,
-}
-
-#[derive(ValueEnum, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum OutputFormatData {
-    BytesLe,
-    BytesBe,
-}
-
-#[derive(ValueEnum, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum OutputFormatMsg {
-    DecLe,
-    HexLe,
-    PartsLe,
-    DecBe,
-    HexBe,
-    PartsBe,
-}
+#[derive(Args, Debug)]
+#[command(flatten_help = true)]
+pub struct StatArgs {}
