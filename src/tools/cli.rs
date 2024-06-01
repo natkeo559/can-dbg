@@ -1,5 +1,26 @@
 use std::path::PathBuf;
 
+#[derive(Debug)]
+pub struct J1939;
+
+#[derive(Debug)]
+pub struct Can;
+
+#[derive(Debug)]
+pub struct A;
+
+#[derive(Debug)]
+pub struct B;
+
+pub trait IsProtocol {}
+pub trait IsLogFormat {}
+
+impl IsProtocol for J1939 {}
+impl IsProtocol for Can {}
+
+impl IsLogFormat for A {}
+impl IsLogFormat for B {}
+
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
 #[derive(ValueEnum, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -41,7 +62,7 @@ pub enum OutputFormatMsg {
 
 #[derive(ValueEnum, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum CandumpFormat {
-    /// can0 00000000 [8] FF FF FF FF FF FF FF FF
+    /// can0 FFF [8] FF FF FF FF FF FF FF FF
     A,
     /// (0000000000.000000) can0 FFFFFFFF#FFFFFFFFFFFFFFFF
     B,
@@ -162,7 +183,7 @@ pub struct DecodeMsgArgs {
     pub protocol: Protocol,
 
     /// [candump formats]
-    ///  - [a] can0 00000000 [8] FF FF FF FF FF FF FF FF
+    ///  - [a] can0 FFF [8] FF FF FF FF FF FF FF FF
     ///  - [b] (0000000000.000000) can0 FFFFFFFF#FFFFFFFFFFFFFFFF
     #[arg(
         value_enum,
@@ -205,7 +226,7 @@ pub struct DecodeFileArgs {
     pub input_file: PathBuf,
 
     /// [candump formats]
-    ///  - [a] can0 00000000 [8] FF FF FF FF FF FF FF FF
+    ///  - [a] can0 FFF [8] FF FF FF FF FF FF FF FF
     ///  - [b] (0000000000.000000) can0 FFFFFFFF#FFFFFFFFFFFFFFFF
     #[arg(
         value_enum,
@@ -241,11 +262,19 @@ pub enum StatCommands {
 #[derive(Args, Debug)]
 #[command(flatten_help = true)]
 pub struct StatFileArgs {
-    #[arg(short = 'f', long, value_name = "FILEPATH")]
-    pub input_file: PathBuf,
+    /// Specifies the protocol type
+    #[arg(
+        value_enum,
+        name = "proto",
+        long,
+        short,
+        value_name = "PROTOCOL",
+        default_value = "j1939"
+    )]
+    pub protocol: Protocol,
 
     /// [candump formats]
-    ///  - [a] can0 00000000 [8] FF FF FF FF FF FF FF FF
+    ///  - [a] can0 FFF [8] FF FF FF FF FF FF FF FF
     ///  - [b] (0000000000.000000) can0 FFFFFFFF#FFFFFFFFFFFFFFFF
     #[arg(
         value_enum,
@@ -256,6 +285,10 @@ pub struct StatFileArgs {
     )]
     pub input_format: CandumpFormat,
 
+    #[arg(short = 'f', long, value_name = "FILEPATH")]
+    pub input_file: PathBuf,
+
+    /// Shows stats for arbitration IDs in the log file
     #[arg(short, long)]
     pub id_stats: bool,
 }
