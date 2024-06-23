@@ -49,12 +49,6 @@ pub enum InputFormatData {
 }
 
 #[derive(ValueEnum, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum OutputFormatData {
-    BytesLe,
-    BytesBe,
-}
-
-#[derive(ValueEnum, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum OutputFormatMsg {
     DecodedLe,
     DecodedBe,
@@ -160,9 +154,6 @@ pub struct DecodeDataArgs {
     #[arg(value_enum, long, default_value = "compact", verbatim_doc_comment)]
     pub input_format: InputFormatData,
 
-    #[arg(value_enum, short, long, default_value = "bytes-le")]
-    pub output_format: OutputFormatData,
-
     /// Specifies the input to be decoded
     #[arg(name = "input", short, long, value_name = "INPUT", required = true)]
     pub input_value: String,
@@ -193,15 +184,6 @@ pub struct DecodeMsgArgs {
         verbatim_doc_comment
     )]
     pub input_format: CandumpFormat,
-
-    #[arg(
-        value_enum,
-        name = "output-format",
-        short,
-        long,
-        default_value = "decoded-le"
-    )]
-    pub output_format: OutputFormatMsg,
 
     /// Specifies the input to be decoded
     #[arg(name = "input", short, long, required = true)]

@@ -1,165 +1,244 @@
-use std::{
-    fs::File,
-    io::{BufRead, BufReader},
-    marker::PhantomData,
-    path::{Path, PathBuf},
-};
+// use can_types::prelude::*;
+// use chrono::{DateTime, Utc};
+// use nom::{
+//     bytes::complete::{tag, take_until},
+//     character::complete::{digit1, hex_digit1, space1},
+//     combinator::map_res,
+//     sequence::{delimited, separated_pair},
+//     IResult,
+// };
+// use std::{
+//     fs::File, io::{BufRead, BufReader}, marker::PhantomData, path::Path
+// };
 
-use anyhow::anyhow;
-use chrono::{DateTime, Utc};
+// pub trait IsLogFormat {}
 
-pub trait IsLogFormat {}
+// pub trait ParseLineFormat {
+//     type Output;
+//     fn parse_line<'a>(input: &'a str) -> IResult<&'a str, Self::Output>;
+// }
 
-#[derive(Debug)]
-pub struct CandumpA {
-    pub i_face: String,
-    pub id: String,
-    pub data_len: usize,
-    pub data_bytes: String,
-}
+// pub trait ParseFileFormat {
+//     type Output;
+//     fn parse_candump<P: AsRef<Path>>(filepath: P) -> Result<Vec<Self::Output>, anyhow::Error>;
+// }
 
-#[derive(Debug)]
-pub struct CandumpB {
-    pub timestamp: DateTime<Utc>,
-    pub i_face: String,
-    pub message: String,
-}
+// pub struct FileParser<F: IsLogFormat> {
+//     phantom: PhantomData<F>
+// }
 
-/// Parse a `can-utils` `candump` log file with entries in the following format:
-///
-/// can0 FFF [8] FF FF FF FF FF FF FF FF
-///
-/// # Errors
-/// - If file does not exist
-/// - If input file format is invalid
-pub fn parse_candump_a<P: AsRef<Path>>(filepath: P) -> Result<Vec<CandumpA>, anyhow::Error> {
-    let invalid_file_err = anyhow!("Invalid file! The file must use the following format: can0 FFF [8] FF FF FF FF FF FF FF FF");
+// #[derive(Debug)]
+// pub struct StandardLog<I: IdKind> {
+//     pub timestamp: DateTime<Utc>,
+//     pub i_face: String,
+//     pub id: Id<I>,
+//     pub pdu: Pdu<Data>,
+// }
 
-    let file = File::open(filepath)?;
-    let reader = BufReader::new(file);
+// pub struct HumanReadableLog<I: IdKind> {
+//     pub i_face: String,
+//     pub id: Id<I>,
+//     pub data_len: usize,
+//     pub pdu: Pdu<Data>,
+// }
 
-    let mut messages: Vec<CandumpA> = Vec::new();
+// impl IsLogFormat for StandardLog<Standard> {}
+// impl IsLogFormat for StandardLog<Extended> {}
+// impl IsLogFormat for HumanReadableLog<Standard> {}
+// impl IsLogFormat for HumanReadableLog<Extended> {}
 
-    for lines in reader.lines() {
-        if let Ok(line) = lines {
-            let mut split_line = line.split_whitespace();
-            let i_face_split_whitespace_opt = split_line.by_ref().next();
-            let id_split_whitespace_opt = split_line.by_ref().next();
-            let data_len_split_whitespace_opt = split_line.by_ref().next();
-            match (
-                i_face_split_whitespace_opt,
-                id_split_whitespace_opt,
-                data_len_split_whitespace_opt,
-            ) {
-                (Some(i_face), Some(id_str), Some(data_len_str)) => {
-                    let data_len_stripped = data_len_str.trim_matches(&['[', ']']);
-                    let data_len = data_len_stripped.parse::<usize>()?;
-                    let data_bytes_string = (0..data_len)
-                        .filter_map(|_| split_line.by_ref().next())
-                        .collect::<String>();
+// pub enum LogFormat {
+//     StandardLog,
+//     HumanReadableLog,
+// }
 
-                    let msg = CandumpA {
-                        i_face: i_face.to_string(),
-                        id: id_str.to_string(),
-                        data_len,
-                        data_bytes: data_bytes_string,
-                    };
-                    messages.push(msg);
-                }
-                _ => {
-                    return Err(invalid_file_err);
-                }
-            }
-        } else {
-            return Err(invalid_file_err);
-        }
-    }
-    Ok(messages)
-}
+// impl ParseLineFormat for StandardLog<Extended> {
+//     type Output = StandardLog<Extended>;
+//     fn parse_line(input: &str) -> IResult<&str, StandardLog<Extended>> {
+//         let (input, (secs, microsecs)) = delimited(
+//             tag("("),
+//             separated_pair(
+//                 map_res(digit1, |s: &str| s.parse::<i64>()),
+//                 tag("."),
+//                 map_res(digit1, |s: &str| s.parse::<u32>()),
+//             ),
+//             tag(") "),
+//         )(input)?;
+//         let (input, interface) = take_until(" ")(input)?;
+//         let (input, _) = space1(input)?;
+//         let (input, (id, pdu)) = separated_pair(
+//             map_res(hex_digit1, |s| {
+//                 let res: Result<Id<Extended>, anyhow::Error> = Ok(IdExtended::from_hex(s));
+//                 res
+//             }),
+//             tag("#"),
+//             map_res(hex_digit1, |s| {
+//                 let res: Result<Pdu<Data>, anyhow::Error> = Ok(PduData::from_hex(s));
+//                 res
+//             }),
+//         )(input)?;
+//         let timestamp = DateTime::from_timestamp(secs, microsecs * 1000).unwrap_or_default();
 
-/// Parse a `can-utils` `candump` log file with entries in the following format:
-///
-/// (0000000000.000000) can0 FFFFFFFF#FFFFFFFFFFFFFFFF
-///
-/// # Errors
-/// - If file does not exist
-/// - If input file format is invalid
-pub fn parse_candump_b<P: AsRef<Path>>(filepath: P) -> Result<Vec<CandumpB>, anyhow::Error> {
-    let invalid_file_err = anyhow!("Invalid file! The file must use the following format: (0000000000.000000) can0 FFFFFFFF#FFFFFFFFFFFFFFFF");
+//         Ok((
+//             input,
+//             StandardLog::<Extended> {
+//                 timestamp,
+//                 i_face: interface.to_string(),
+//                 id,
+//                 pdu,
+//             },
+//         ))
+//     }
+// }
 
-    let file = File::open(filepath)?;
-    let reader = BufReader::new(file);
+// impl ParseLineFormat for StandardLog<Standard> {
+//     type Output = StandardLog<Standard>;
+//     fn parse_line(input: &str) -> IResult<&str, StandardLog<Standard>> {
+//         let (input, (secs, microsecs)) = delimited(
+//             tag("("),
+//             separated_pair(
+//                 map_res(digit1, |s: &str| s.parse::<i64>()),
+//                 tag("."),
+//                 map_res(digit1, |s: &str| s.parse::<u32>()),
+//             ),
+//             tag(") "),
+//         )(input)?;
+//         let (input, interface) = take_until(" ")(input)?;
+//         let (input, _) = space1(input)?;
+//         let (input, (id, pdu)) = separated_pair(
+//             map_res(hex_digit1, |s| {
+//                 let res: Result<Id<Standard>, anyhow::Error> = Ok(IdStandard::from_hex(s));
+//                 res
+//             }),
+//             tag("#"),
+//             map_res(hex_digit1, |s| {
+//                 let res: Result<Pdu<Data>, anyhow::Error> = Ok(PduData::from_hex(s));
+//                 res
+//             }),
+//         )(input)?;
+//         let timestamp = DateTime::from_timestamp(secs, microsecs * 1000).unwrap_or_default();
 
-    let mut messages: Vec<CandumpB> = Vec::new();
+//         Ok((
+//             input,
+//             StandardLog::<Standard> {
+//                 timestamp,
+//                 i_face: interface.to_string(),
+//                 id,
+//                 pdu,
+//             },
+//         ))
+//     }
+// }
 
-    for lines in reader.lines() {
-        if let Ok(line) = lines {
-            let mut split_line = line.split_whitespace();
-            let date_time_split_whitespace_opt = split_line.by_ref().next();
-            let i_face_split_whitespace_opt = split_line.by_ref().next();
-            let msg_split_whitespace_opt = split_line.by_ref().next();
+// impl ParseFileFormat for FileParser<StandardLog<Extended>> {
+//     type Output = StandardLog<Extended>;
+    
+//     /// Parse a `can-utils` `candump` log file with entries in the following format:
+//     ///
+//     /// (0000000000.000000) can0 FFFFFFFF#FFFFFFFFFFFFFFFF
+//     ///
+//     /// # Errors
+//     /// - If file does not exist
+//     /// - If input file format is invalid
+//     fn parse_candump<P: AsRef<Path>>(filepath: P) -> Result<Vec<Self::Output>, anyhow::Error> {
+//         let file = File::open(filepath)?;
+//         let reader = BufReader::new(file);
 
-            match (
-                date_time_split_whitespace_opt,
-                i_face_split_whitespace_opt,
-                msg_split_whitespace_opt,
-            ) {
-                (Some(date_time_split_whitespace), Some(i_face), Some(message)) => {
-                    let date_time_split = date_time_split_whitespace
-                        .trim_matches('(')
-                        .trim_end_matches(')');
-                    let mut split_date_time = date_time_split.split('.');
-                    let date_time_str_opt = split_date_time.by_ref().next();
-                    let microseconds_str_opt = split_date_time.by_ref().next();
+//         let mut messages: Vec<Self::Output> = Vec::new();
 
-                    match (date_time_str_opt, microseconds_str_opt) {
-                        (Some(date_time_str), Some(microseconds_str)) => {
-                            let date_time = date_time_str.parse::<i64>()?;
-                            let microseconds = microseconds_str.parse::<u32>()?;
-                            if let Some(timestamp) =
-                                DateTime::from_timestamp(date_time, microseconds * 1000)
-                            {
-                                let msg = CandumpB {
-                                    timestamp,
-                                    i_face: i_face.to_string(),
-                                    message: message.to_string(),
-                                };
-                                messages.push(msg);
-                            } else {
-                                return Err(invalid_file_err);
-                            }
-                        }
-                        _ => {
-                            return Err(invalid_file_err);
-                        }
-                    }
-                }
-                _ => {
-                    return Err(invalid_file_err);
-                }
-            }
-        } else {
-            return Err(invalid_file_err);
-        }
-    }
-    Ok(messages)
-}
+//         for line in reader.lines() {
+//             if let Ok(line_string) = line {
+//                 let trimmed_line = line_string.trim();
+//                 let (_, parsed_line) =
+//                     Self::Output::parse_line(trimmed_line).map_err(|e| anyhow::anyhow!("{e}"))?;
+//                 messages.push(parsed_line)
+//             }
+//         }
 
-#[cfg(test)]
-mod file_tests {
-    use std::{path::PathBuf, str::FromStr};
+//         Ok(messages)
+//     }
+// }
 
-    use crate::file::parse_candump_a;
+// impl ParseFileFormat for FileParser<StandardLog<Standard>> {
+//     type Output = StandardLog<Standard>;
+    
+//     /// Parse a `can-utils` `candump` log file with entries in the following format:
+//     ///
+//     /// (0000000000.000000) can0 FFFFFFFF#FFFFFFFFFFFFFFFF
+//     ///
+//     /// # Errors
+//     /// - If file does not exist
+//     /// - If input file format is invalid
+//     fn parse_candump<P: AsRef<Path>>(filepath: P) -> Result<Vec<Self::Output>, anyhow::Error> {
+//         let file = File::open(filepath)?;
+//         let reader = BufReader::new(file);
 
-    use super::parse_candump_b;
+//         let mut messages: Vec<Self::Output> = Vec::new();
 
-    #[test]
-    fn test_timestamp_from_log() -> Result<(), anyhow::Error> {
-        let file = parse_candump_b("test_files/j1939dump.log")?;
+//         for line in reader.lines() {
+//             if let Ok(line_string) = line {
+//                 let trimmed_line = line_string.trim();
+//                 let (_, parsed_line) =
+//                     Self::Output::parse_line(trimmed_line).map_err(|e| anyhow::anyhow!("{e}"))?;
+//                 messages.push(parsed_line)
+//             }
+//         }
 
-        for i in file {
-            println!("{:?}", i)
-        }
-        Ok(())
-    }
-}
+//         Ok(messages)
+//     }
+// }
+
+// // impl<I: IdKind> CandumpFileFormat for HumanReadableLog<I> {
+// //     type Output = Self;
+
+// //     /// Parse a `can-utils` `candump` log file with entries in the following format:
+// //     ///
+// //     /// can0 FFF [8] FF FF FF FF FF FF FF FF
+// //     ///
+// //     /// # Errors
+// //     /// - If file does not exist
+// //     /// - If input file format is invalid
+// //     fn parse_candump<P: AsRef<Path>>(&self, filepath: P) -> Result<Vec<Self::Output>, anyhow::Error> {
+// //         let invalid_file_err = anyhow!("Invalid file! The file must use the following format: can0 FFF [8] FF FF FF FF FF FF FF FF");
+
+// /// Parse a `can-utils` `candump` log file with entries in the following format:
+// ///
+// /// can0 FFF [8] FF FF FF FF FF FF FF FF
+// ///
+// /// # Errors
+// /// - If file does not exist
+// /// - If input file format is invalid
+// // pub fn parse_candump_a<P: AsRef<Path>>(filepath: P) -> Result<Vec<CandumpA>, anyhow::Error> {
+// //     let invalid_file_err = anyhow!("Invalid file! The file must use the following format: can0 FFF [8] FF FF FF FF FF FF FF FF");
+
+// #[cfg(test)]
+// mod file_tests {
+//     use can_types::prelude::*;
+
+//     use super::*;
+
+//     #[test]
+//     fn test_file_parser_standard_extended() -> Result<(), anyhow::Error> {
+//         let parsed_file = FileParser::<StandardLog<Extended>>::parse_candump("test_files/j1939dump.log")?;
+//         for i in parsed_file {
+//             let a: Addr = i.id.source_address().into();
+//             println!("[{}]", a);
+//         }
+//         Ok(())
+//     }
+
+//     #[test]
+//     fn test_file_parser_standard_standard() -> Result<(), anyhow::Error> {
+//         let parsed_file = FileParser::<StandardLog<Standard>>::parse_candump("../../../Desktop/road/ambient/ambient_dyno_drive_basic_long.log")?;
+//         for i in parsed_file {
+//             println!(
+//                 "{}, {}, ID={}, DATA={}",
+//                 i.timestamp,
+//                 i.i_face,
+//                 i.id.into_bits(),
+//                 i.pdu.into_bits()
+//             );
+//         }
+//         Ok(())
+//     }
+// }
